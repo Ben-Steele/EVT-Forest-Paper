@@ -1,0 +1,85 @@
+\documentclass[conference]{IEEEtran}
+
+
+\author{
+Ben Steele \\
+UCCS Machine Learning REU \\
+\texttt{Benjamin.Steele@coloradocollege.edu} \\
+}
+\begin{document}
+
+\title{Statistical Extreme Value Estimation Trees in Random Forests}
+
+\author{\IEEEauthorblockN{Ben Steele}
+\IEEEauthorblockA{UCCS Machine Learning REU\\
+Benjamin.Steele@ColoradoCollege.edu}}
+
+\maketitle
+
+\begin{abstract}
+Real world tasks in classification often involve incomplete knowledge of the world 
+and unrelated inputs.  A random forest, like most classifiers, must output one of its 
+known classes for any input whether the input is relevant to its classes or not.  
+In this article we propose using statistical extreme value theory to determine the 
+relevance of the input to each decision tree in the forest and the relevance of the input 
+to the random forest model as a whole.  This allows us to exclude the vote of trees that 
+are not equipped to predict the class of a given output and allows us to determine whether
+the model as a whole is equipped to predict the class.  We hope to find improvements in 
+accuracy of open and closed set classification.
+
+\end{abstract}
+
+\section{Introduction}
+
+Random forests are among the highest performing machine learning techniques.  Because they are comprised of decision trees, 
+they inherently have very low bias.  By averaging the output of each tree they reduce variance which 
+results in a relatively low bias, low variance model.  The original implementation of random forests took
+ the majority vote from all the trees to decide which class to output \cite{RF}.  Using this method it is hard to tell 
+ how confident the model is in its answer.  \par
+ 
+ Probability estimation trees (PETs) are able to estimate the 
+ probability that a given data point is in a class.  Bagging, the basis of random forests, substantially 
+ improves PETs classification accuracy \cite{baggingPETs}.  Finding the best algorithm for probability estimation
+ in trees is still an open question and there is interest in this area of research 
+ \cite{RandomForestPET}. We believe the probability estimates can be 
+ improved by using extreme value theory (EVT) \cite{EVT} to create a more accurate model of the probability 
+ estimation in each tree.  Errors in classification by decision trees generally occur because a data point is close to 
+ a decision boundary for any of the branches.  Probability estimation trees give an estimation of the probability that the
+ class they have chosen is correct,  which means the tree can weight its decision depending on whether it has a high or low probability.  Most implementations only compute probability at the leaf node.  We believe computing the probability at every node and propagating the error down the tree will improve the estimation.  By improving the probability estimate, we can more accurately weight each tree in a random forest.  \par
+ 
+ Open set modeling is another feature we can add to Random forests using EVT.  Open set is a form of modeling 
+ in which the model is able to determine whether the point in question is similar to the data it was trained on.  We call this
+  difference from the training data ignorance.  If the ignorance is too high the model cannot accurately predict the point 
+ because the point is likely not in any of the classes it was trained on.  Using EVT we can
+  make open set decisions for each tree in the forest.  Each tree will be able to determine how fit it is to predict the class of
+  a point and they will weigh their probability estimate based on that value.  This could improve probability
+ estimates of the forest by giving less weight to trees that were not trained on data similar to the point.
+
+\section{Method}
+
+A decision tree produces disjoint classes with linear boundaries parallel to the axes.  At each node of a decision
+tree a linear boundary called the decision boundary is created, separating the data points of that node.  
+We propose using statistical extreme value theory to estimate the probability that a point is correctly classified by 
+the decision boundary. Confidence is the term we use to describe the probability that a point belongs on the side 
+of the boundary it ends up on.  Confidence can be found using the probability estimate.  \par
+
+Using the concepts of inclusion and exclusion presented in Jain et al. \cite{CAP}, we will create a probability estimate model for
+each side of the decision boundary.  These models will determine how likely it is that a given point belongs to each side.  For points near the boundary, both models could have similar probabilities.  The side of the boundary that the point lies on is the
+class we will place it in.  Inclusion is the probability that a point is actually in the class it was placed in.  Exclusion is probability that the point is not in the class on the other side of the boundary.  If a point has a high inclusion and high exclusion, the decision will have a higher confidence.  However, if the exclusion is low, we do not have as much confidence.  Using a model for each side of the boundary allows us to get a more accurate prediction.
+ 
+ We will also have a model for the ignorance on each side of the decision boundary.  This model will tell us whether a point is similar to the training points used at this node of the estimation tree.  This does not effect confidence, but it will allow for open set interpretation of the tree.  After getting to the leaf of the tree we can figure out the ignorance of the whole tree.  At this point it is not clear what the best way to do this will be.  We could average the confidence of every decision on the path leading to a leaf node.  This does not seem like the best way because it will even out excellent and poor decisions when we believe it will be more effective to accentuate the excellent and poor decisions.  To do this it may be better to multiply the confidence of each decision leading to the leaf node.  We will need to determine the best way experimentaly \par
+ 
+ We could take the highest score of ignorance from the path to the leaf node and use that as the ignorance of the tree.  This could be best choice because different gaps in the dataset could be accentuated by different nodes in the tree.  A point could be in the middle of the range of dataset, but still in an unknown space.  A more broad decision boundary may determine it to be within the dataset because it is between multiple other classes, but as the decisions get closer to those classes it becomes more appartent that it is in fact separate from those classes.  In this case we do not want the influence of the broad decision to influence our overall ignorance because it was not a fine enough measurement.  
+\section{Evaluation}
+
+Because this new approach will change the structure of the random forest algorithm, we will do testing 
+on nearly all aspects of the algorithm.  We will do testing in accuracy, area under the ROC curve (AUC), Brier score, Speed, and memory usage.  This will allow us to see any tradeoffs this implementation may make while giving us a full comparison to other algorithms.  We will use select datasets from the UCI Repository \cite{ucirepo}.
+
+\section{Conclusions}
+
+There are a few questions we plan to test.  First we will test if using statistical EVT on the leaf nodes to determine
+probability will improve performance.  After that we will test if weighing the individual trees based on ignorance improves performance.  We can then test using statistical EVT on every node in the tree or certain nodes in the tree.  We will combine those probabilities to determine the overall probability of the class from that specific tree.  We can then determine if using the probability at multiple nodes is more accurate than only using the leaf node.  We can also experiment with how to combine the ignorance from each node in the same manner. 
+\bibliography{ProbabilityRandomForest}
+\bibliographystyle{plain}
+
+\end{document}
